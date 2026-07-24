@@ -5,9 +5,13 @@ import utils
 
 
 def readCard():
-    phoneCamFeed = True        # Flag signaling if images are being read live from phone camera or from image file
-    pathImage = 'testImages/tiltright.jpg'      # File name of image
-    cam = cv2.VideoCapture(1)   # Use Video source 1 = phone; 0 = computer webcam
+    liveFeed = True            # Flag signaling if images are being read live from a webcam or from an image file
+    rotateFeed = False         # True for a phone in portrait (Iriun); False for a landscape webcam like the C920
+    pathImage = 'testImages/tiltright.jpg'      # File name of image (only used when liveFeed is False)
+    cam = cv2.VideoCapture(0)   # Video source index; 0 = default webcam (the C920 on this machine)
+    # Request a higher capture resolution so the warped card keeps enough detail for hashing
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
     # Scaled to the IRL height and width of a Pokemon card (6.6 cm x 8.8 cm)
     widthCard = utils.getWidthCard()
@@ -17,12 +21,13 @@ def readCard():
         # Create a blank image
         blackImg = np.zeros((heightCard, widthCard, 3), np.uint8)
 
-        # Check if using phone camera or saved picture
-        if phoneCamFeed:
-            # Read in frame and rotate 90 degrees b/c video comes in horizontally
+        # Check if using a live webcam feed or a saved picture
+        if liveFeed:
             check, frame = cam.read()
-            rot90frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-            rot90frame = cv2.resize(rot90frame, (widthCard, heightCard))
+            # A phone in portrait feeds a sideways frame that needs rotating; a landscape webcam does not
+            if rotateFeed:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            rot90frame = cv2.resize(frame, (widthCard, heightCard))
         else:
             # Read in picture and resize it to normalize
             pic = cv2.imread(pathImage)
@@ -88,7 +93,7 @@ def readCard():
         # Display the image
         cv2.imshow("Card Finder", stackedImage)
 
-        if not phoneCamFeed:  # If reading image file, display image until key is pressed
+        if not liveFeed:  # If reading image file, display image until key is pressed
             if not found:  # If a matching card has not been found
                 print('Please try another image. Your card could not be found.')
             cv2.waitKey(0)  # Keeps window open until any key is pressed
