@@ -1,0 +1,8 @@
+{
+  "id": "evolutions",
+  "name": "Evolutions",
+  "series": "XY",
+  "imageExt": ".png",
+  "padding": 3,
+  "cutoff": 18
+}

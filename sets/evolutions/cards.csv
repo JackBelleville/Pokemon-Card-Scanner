@@ -1,0 +1,114 @@
+cardnumber,cardname,pokemon,rarity,cardtype
+1,Venusaur EX,Venusaur,EX Rare,Pokemon
+2,M Venusaur EX,Mega Venusaur,EX Rare,Pokemon
+3,Caterpie,Caterpie,Common,Pokemon
+4,Metapod,Metapod,Uncommon,Pokemon
+5,Weedle,Weedle,Common,Pokemon
+6,Kakuna,Kakuna,Uncommon,Pokemon
+7,Beedrill,Beedrill,Rare,Pokemon
+8,Tangela,Tangela,Common,Pokemon
+9,Charmander,Charmander,Common,Pokemon
+10,Charmeleon,Charmeleon,Uncommon,Pokemon
+11,Charizard,Charizard,Holo Rare,Pokemon
+12,Charizard EX,Charizard,EX Rare,Pokemon
+13,M Charizard EX,Mega Charizard,EX Rare,Pokemon
+14,Vulpix,Vulpix,Common,Pokemon
+15,Ninetales,Ninetales,Holo Rare,Pokemon
+16,Ninetales BREAK,Ninetales,Break Rare,Pokemon
+17,Growlithe,Growlithe,Common,Pokemon
+18,Arcanine,Arcanine,Rare,Pokemon
+19,Ponyta,Ponyta,Common,Pokemon
+20,Magmar,Magmar,Uncommon,Pokemon
+21,Blastoise EX,Blastoise,EX Rare,Pokemon
+22,M Blastoise EX,Mega Blastoise,EX Rare,Pokemon
+23,Poliwag,Poliwag,Common,Pokemon
+24,Poliwhirl,Poliwhirl,Uncommon,Pokemon
+25,Poliwrath,Poliwrath,Holo Rare,Pokemon
+26,Slowbro EX,Slowbro,EX Rare,Pokemon
+27,M Slowbro EX,Mega Slowbro,EX Rare,Pokemon
+28,Seel,Seel,Common,Pokemon
+29,Dewgong,Dewgong,Rare,Pokemon
+30,Staryu,Staryu,Common,Pokemon
+31,Starmie,Starmie,Rare,Pokemon
+32,Starmie BREAK,Starmie,Break Rare,Pokemon
+33,Magikarp,Magikarp,Common,Pokemon
+34,Gyarados,Gyarados,Holo Rare,Pokemon
+35,Pikachu,Pikachu,Common,Pokemon
+36,Raichu,Raichu,Holo Rare,Pokemon
+37,Magnemite,Magnemite,Common,Pokemon
+38,Magneton,Magneton,Rare Holo,Pokemon
+39,Voltorb,Voltorb,Common,Pokemon
+40,Electrode,Electrode,Rare,Pokemon
+41,Electabuzz,Electabuzz,Common,Pokemon
+42,Zapdos,Zapdos,Holo Rare,Pokemon
+43,Nidoran ♂,Nidoran ♂,Common,Pokemon
+44,Nidorino,Nidorino,Uncommon,Pokemon
+45,Nidoking,Nidoking,Holo Rare,Pokemon
+46,Nidoking BREAK,Nidoking,Break Rare,Pokemon
+47,Gastly,Gastly,Common,Pokemon
+48,Haunter,Haunter,Uncommon,Pokemon
+49,Drowzee,Drowzee,Common,Pokemon
+50,Koffing,Koffing,Uncommon,Pokemon
+51,Mewtwo,Mewtwo,Rare,Pokemon
+52,Mewtwo EX,Mewtwo,EX Rare,Pokemon
+53,Mew,Mew,Holo Rare,Pokemon
+54,Sandshrew,Sandshrew,Common,Pokemon
+55,Diglett,Diglett,Common,Pokemon
+56,Dugtrio,Dugtrio,Rare,Pokemon
+57,Machop,Machop,Common,Pokemon
+58,Machoke,Machoke,Uncommon,Pokemon
+59,Machamp,Machamp,Holo Rare,Pokemon
+60,Machamp BREAK,Machamp,Break Rare,Pokemon
+61,Onix,Onix,Common,Pokemon
+62,Hitmonchan,Hitmonchan,Holo Rare,Pokemon
+63,Clefairy,Clefairy,Holo Rare,Pokemon
+64,Pidgeot EX,Pidgeot,EX Rare,Pokemon
+65,M Pidgeot EX,Mega Pidgeot,EX Rare,Pokemon
+66,Rattata,Rattata,Common,Pokemon
+67,Raticate,Raticate,Rare,Pokemon
+68,Farfetch'd,Farfetch'd,Rare,Pokemon
+69,Doduo,Doduo,Common,Pokemon
+70,Chansey,Chansey,Holo Rare,Pokemon
+71,Porygon,Porygon,Uncommon,Pokemon
+72,Dragonite EX,Dragonite,EX Rare,Pokemon
+73,Blastoise Spirit Link,NA,Uncommon,Trainer Item
+74,Brock's Grit,NA,Uncommon,Trainer Supporter
+75,Charizard Spirit Link,NA,Uncommon,Trainer Item
+76,Devolution Spray,NA,Uncommon,Trainer Item
+77,Energy Retrieval,NA,Uncommon,Trainer Item
+78,Full Heal,NA,Uncommon,Trainer Item
+79,Maintenance,NA,Uncommon,Trainer Item
+80,Misty's Determination,NA,Uncommon,Trainer Supporter
+81,Pidgeot Spirit Link,NA,Uncommon,Trainer Item
+82,Pokedex,NA,Uncommon,Trainer Item
+83,Potion,NA,Uncommon,Trainer Item
+84,Professor Oak's Hint,NA,Uncommon,Trainer Supporter
+85,Revive,NA,Uncommon,Trainer Item
+86,Slowbro Spirit Link,NA,Uncommon,Trainer Item
+87,Super Potion,NA,Uncommon,Trainer Item
+88,Switch,NA,Uncommon,Trainer Item
+89,Venusaur Spirit Link,NA,Uncommon,Trainer Item
+90,Double Colorless Energy,NA,Common,Energy
+91,Grass Energy,NA,Common,Energy
+92,Fire Energy,NA,Common,Energy
+93,Water Energy,NA,Common,Energy
+94,Electric Energy,NA,Common,Energy
+95,Psychic Energy,NA,Common,Energy
+96,Fighting Energy,NA,Common,Energy
+97,Dark Energy,NA,Common,Energy
+98,Metal Energy,NA,Common,Energy
+99,Fairy Energy,NA,Common,Energy
+100,M Venusaur EX,Mega Venusaur,Ultra Rare,Pokemon
+101,M Charizard EX,Mega Charizard,Ultra Rare,Pokemon
+102,M Blastoise EX,Mega Blastoise,Ultra Rare,Pokemon
+103,Mewtwo EX,Mewtwo,Ultra Rare,Pokemon
+104,Pidgeot EX,Pidgeot,Ultra Rare,Pokemon
+105,M Pidgeot EX,Mega Pidgeot,Ultra Rare,Pokemon
+106,Dragonite EX,Dragonite,Ultra Rare,Pokemon
+107,Brock's Grit,NA,Ultra Rare,Trainer Supporter
+108,Misty's Determination,NA,Ultra Rare,Trainer Supporter
+109,Exeggutor,Exeggutor,Secret Rare,Pokemon
+110,Flying Pikachu,Flying Pikachu,Secret Rare,Pokemon
+111,Surfing Pikachu,Surfing Pikachu,Secret Rare,Pokemon
+112,Imakuni?'s Doduo,Imakuni?'s Doduo,Secret Rare,Pokemon
+113,Here Comes Team Rocket!,NA,Secret Rare,Trainer Supporter

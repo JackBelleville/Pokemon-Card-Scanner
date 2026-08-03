@@ -1,14 +1,22 @@
+import argparse
+import sys
 import cv2
 import numpy as np
 import cardData
+import cardSets
 import utils
 
 
-def readCard():
-    liveFeed = True            # Flag signaling if images are being read live from a webcam or from an image file
-    rotateFeed = False         # True for a phone in portrait (Iriun); False for a landscape webcam like the C920
-    pathImage = 'testImages/tiltright.jpg'      # File name of image (only used when liveFeed is False)
-    cam = cv2.VideoCapture(0)   # Video source index; 0 = default webcam (the C920 on this machine)
+def readCard(setid, liveFeed=True, pathImage='testImages/tiltright.jpg', camIndex=0, rotateFeed=False):
+    # setid       Id of the set being scanned against; the folder name under sets/
+    # liveFeed    Flag signaling if images are being read live from a webcam or from an image file
+    # pathImage   File name of image (only used when liveFeed is False)
+    # camIndex    Video source index; 0 = default webcam (the C920 on this machine)
+    # rotateFeed  True for a phone in portrait (Iriun); False for a landscape webcam like the C920
+    setdef = cardSets.loadSet(setid)
+    print(f"Scanning against {setdef.name} ({setdef.numCards} cards).")
+
+    cam = cv2.VideoCapture(camIndex)
     # Request a higher capture resolution so the warped card keeps enough detail for hashing
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -77,7 +85,7 @@ def readCard():
         bigContour = cv2.resize(bigContour, (widthCard, heightCard))
 
         # Check if a matching card has been found, and if so, display it
-        found, matchingCard = utils.findCard(imgWarpColored.copy())  # Check to see if a matching card was found
+        found, matchingCard = utils.findCard(imgWarpColored.copy(), setid)  # Check to see if a matching card was found
 
         # An array of all 8 images
         imageArr = ([rot90frame, grayFrame, blurredFrame, edgedFrame],
@@ -91,7 +99,7 @@ def readCard():
         stackedImage = utils.makeDisplayImage(imageArr, labels)
 
         # Display the image
-        cv2.imshow("Card Finder", stackedImage)
+        cv2.imshow(f"Card Finder - {setdef.name}", stackedImage)
 
         if not liveFeed:  # If reading image file, display image until key is pressed
             if not found:  # If a matching card has not been found
@@ -110,8 +118,73 @@ def readCard():
     cv2.destroyAllWindows()
 
 
+# Prints every set found under sets/, marking the ones already indexed into the database
+def printSets(sets):
+    print('Available sets:')
+    for i, s in enumerate(sets, start=1):
+        status = '' if cardData.isSetIndexed(s.setid) else '  (not indexed yet)'
+        print(f'  {i}. {s.name} [{s.setid}] - {s.numCards} cards{status}')
+
+
+# Asks the user which set they are scanning from and returns its id
+def chooseSet(sets):
+    printSets(sets)
+    while True:
+        answer = input('Which set are you scanning from? (number or id, or q to quit): ').strip()
+        if answer.lower() == 'q':
+            return None
+        if answer.isdigit() and 1 <= int(answer) <= len(sets):
+            return sets[int(answer) - 1].setid
+        for s in sets:
+            if answer.lower() == s.setid.lower():
+                return s.setid
+        print('Not one of the choices above; try again.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Scan a Pokemon card and identify it within a chosen set.')
+    parser.add_argument('--set', dest='setid',
+                        help='Id of the set to scan against (the folder name under sets/). '
+                             'You are asked to pick one if this is left out.')
+    parser.add_argument('--list-sets', action='store_true', help='List the available sets and exit')
+    parser.add_argument('--image', help='Read this image file instead of the webcam')
+    parser.add_argument('--camera', type=int, default=0, help='Webcam index to read from (default 0)')
+    parser.add_argument('--rotate', action='store_true',
+                        help='Rotate the feed 90 degrees, for a phone camera held in portrait')
+    parser.add_argument('--reindex', action='store_true',
+                        help='Re-hash the chosen set even if it is already in the database, '
+                             'for when its images or cards.csv have changed')
+    args = parser.parse_args()
+
+    sets = cardSets.listSets()
+    if not sets:
+        print(f'No sets found in {cardSets.SETSDIR}/. See the README for how to add one.')
+        return 1
+
+    if args.list_sets:
+        printSets(sets)
+        return 0
+
+    setid = args.setid
+    if setid is None:
+        setid = chooseSet(sets)
+        if setid is None:
+            return 0
+    elif setid not in [s.setid for s in sets]:
+        print(f"No set called '{setid}' in {cardSets.SETSDIR}/.")
+        printSets(sets)
+        return 1
+
+    # Hashes the set into the database if this is the first time it has been used
+    cardData.ensureSetIndexed(setid, force=args.reindex)
+
+    readCard(setid,
+             liveFeed=args.image is None,
+             pathImage=args.image,
+             camIndex=args.camera,
+             rotateFeed=args.rotate)
+    return 0
+
+
 if __name__ == '__main__':
-    isFirst = False  # True if this is your first time running this code; will create a new database
-    if isFirst:
-        cardData.createDatabase()
-    readCard()  # Finds and reads from a saved image or live feed
+    sys.exit(main())

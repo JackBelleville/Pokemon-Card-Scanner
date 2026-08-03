@@ -1,6 +1,8 @@
 # Headless check of the scan -> hash -> match pipeline for every image in testImages/.
 # Mirrors the image-file path of main.readCard() but skips all cv2.imshow() calls.
+# Usage: python test_headless.py [setid]   (defaults to evolutions)
 import os
+import sys
 import cv2
 import numpy as np
 from PIL import Image
@@ -37,6 +39,10 @@ def scanImage(pathImage):
 
 
 def main():
+    setid = sys.argv[1] if len(sys.argv) > 1 else 'evolutions'
+    cardData.ensureSetIndexed(setid)
+    print(f'Scanning against set: {setid}')
+
     for name in sorted(os.listdir('testImages')):
         path = os.path.join('testImages', name)
         print(f'\n=== {name} ===')
@@ -58,7 +64,7 @@ def main():
         hashes[3] = imagehash.dhash(scannedCard)
 
         print('  min hash distance: ', end='')
-        cardinfo = cardData.compareCards(hashes)
+        cardinfo = cardData.compareCards(hashes, setid)
         if cardinfo is None:
             print('  NO MATCH (above cutoff)')
         else:

@@ -4,6 +4,7 @@ import math
 from PIL import Image
 import imagehash
 import cardData
+import cardSets
 
 
 # Get the width of the cards/images
@@ -120,9 +121,9 @@ def swap(arr, ind1, ind2):
     arr[ind2] = temp
 
 
-# Compares the average hash of the current frame with the average has of every card in evolutions
+# Compares the hashes of the current frame with the hashes of every card in the selected set
 # Returns True if a matching card is found and False if not
-def findCard(imgWarpColor):
+def findCard(imgWarpColor, setid):
     # Converts image format from OpenCV format to PIL format
     # Converts from Blue Green Red to Red Green Blue image format
     convertedImgWarpColor = cv2.cvtColor(imgWarpColor, cv2.COLOR_BGR2RGB)
@@ -135,22 +136,21 @@ def findCard(imgWarpColor):
     hashes[2] = imagehash.phash(scannedCard)
     hashes[3] = imagehash.dhash(scannedCard)
 
-    # Compares this hash to a database of hash values for all cards in the Evolutions set
-    cardinfo = cardData.compareCards(hashes)
+    # Compares this hash to a database of hash values for all cards in the selected set
+    cardinfo = cardData.compareCards(hashes, setid)
 
     # If a matching card was found, print its information and return True and an image of the card
     if cardinfo is not None:
         getFoundCardData(cardinfo)  # Displays an image containing card info
-        return True, getMatchingCard(cardinfo['Card Number'])
+        return True, getMatchingCard(setid, cardinfo['Card Number'])
 
     # If no matching card was found, return False & black image
     return False, np.zeros((getHeightCard(), getWidthCard(), 3), np.uint8)
 
 
-# Returns the matching card image given the card number
-def getMatchingCard(cardNum):
-    filename = 'evolutionsCardsImages/' + str(cardNum).rjust(3, '0') + '.png'
-    foundCard = cv2.imread(filename)
+# Returns the matching card image given the set and the card number
+def getMatchingCard(setid, cardNum):
+    foundCard = cv2.imread(cardSets.loadSet(setid).imagePath(cardNum))
     return cv2.resize(foundCard, (getWidthCard(), getHeightCard()))
 
 
@@ -200,7 +200,7 @@ def makeDisplayImage(imgArr, labels):
 
 # Uses information on the founding card to display a window with information on the card
 def getFoundCardData(cardinfo):
-    infoImg = np.full((320, getWidthCard() + 150, 3), 255, np.uint8)
+    infoImg = np.full((340, getWidthCard() + 150, 3), 255, np.uint8)
 
     # Card info
     cv2.putText(infoImg, "Card info:",
@@ -208,55 +208,60 @@ def getFoundCardData(cardinfo):
     cv2.putText(infoImg, "__________________________________________________",
                 (0, 50), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Card Name:",
+    cv2.putText(infoImg, "Set:",
                 (5, 80), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Card Name']}",
+    cv2.putText(infoImg, f"{cardinfo['Set']}",
                 (225, 80), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Card Number:",
+    cv2.putText(infoImg, "Card Name:",
                 (5, 100), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Card Number']}",
+    cv2.putText(infoImg, f"{cardinfo['Card Name']}",
                 (225, 100), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Card Rarity:",
+    cv2.putText(infoImg, "Card Number:",
                 (5, 120), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Rarity']}",
+    cv2.putText(infoImg, f"{cardinfo['Card Number']}",
                 (225, 120), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Card Type:",
+    cv2.putText(infoImg, "Card Rarity:",
                 (5, 140), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Card Type']}",
+    cv2.putText(infoImg, f"{cardinfo['Rarity']}",
                 (225, 140), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+
+    cv2.putText(infoImg, "Card Type:",
+                (5, 160), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+    cv2.putText(infoImg, f"{cardinfo['Card Type']}",
+                (225, 160), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
     # Pokemon info
     cv2.putText(infoImg, "Pokemon info:",
-                (5, 180), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 0, 0), 2)
+                (5, 200), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0, 0, 0), 2)
     cv2.putText(infoImg, "__________________________________________________",
-                (0, 190), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+                (0, 210), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
     cv2.putText(infoImg, "Pokemon:",
-                (5, 220), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Pokemon']}",
-                (225, 220), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-
-    cv2.putText(infoImg, "Pokedex Number:",
                 (5, 240), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Pokedex Number']}",
+    cv2.putText(infoImg, f"{cardinfo['Pokemon']}",
                 (225, 240), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Pokemon Card Type:",
+    cv2.putText(infoImg, "Pokedex Number:",
                 (5, 260), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Pokemon Type']}",
+    cv2.putText(infoImg, f"{cardinfo['Pokedex Number']}",
                 (225, 260), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Pokemon Stage:",
+    cv2.putText(infoImg, "Pokemon Card Type:",
                 (5, 280), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Pokemon Stage']}",
+    cv2.putText(infoImg, f"{cardinfo['Pokemon Type']}",
                 (225, 280), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
-    cv2.putText(infoImg, "Pokemon Height (m):",
+    cv2.putText(infoImg, "Pokemon Stage:",
                 (5, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
-    cv2.putText(infoImg, f"{cardinfo['Pokemon Height']}",
+    cv2.putText(infoImg, f"{cardinfo['Pokemon Stage']}",
                 (225, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+
+    cv2.putText(infoImg, "Pokemon Height (m):",
+                (5, 320), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+    cv2.putText(infoImg, f"{cardinfo['Pokemon Height']}",
+                (225, 320), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
 
     cv2.imshow('Card Info', infoImg)

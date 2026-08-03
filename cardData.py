@@ -1,173 +1,233 @@
 import sqlite3
 import os
-import cardSet
+import cardSets
 import pokedex
-import evolutionsSet
 import imagehash
 import numpy as np
 
 databasename = "pokemonDatabase.db"  # File the SQLite database is stored in
 
-
-# Creates a database of pokemon
-def createDatabase():
-    # Remove any existing database file so we always start from a clean slate
-    # (in case the user forgot to set isFirst back to False after already creating it)
-    if os.path.exists(databasename):
-        os.remove(databasename)
-
-    # Add tables and values to database
-    initializeDatabase()
+# Parsing the 16 hex hashes of every card out of the database on every frame of a live feed
+# is wasted work, so each set's parsed hashes are kept here after the first comparison
+_hashCache = {}
 
 
-# Initializes database with inital values for cards and pokemon
-def initializeDatabase():
-    # Connects to the database file, creating it if it does not yet exist
+# Opens the database, creating the tables if this is the first run
+def connect():
     db = sqlite3.connect(databasename)
+    createTables(db)
+    return db
 
-    # Creates a cursor so that we can edit the database
+
+# Creates the tables if they do not exist yet. All three are shared by every set:
+# adding a set inserts rows, it does not add tables.
+def createTables(db):
     mycursor = db.cursor()
 
-    # Creates a Pokedex object that holds information on the first 151 (Kanto) Pokemon and some of their mega evolutions
-    # Information includes pokedex number, pokemon names, type, stage, and height
-    poke = pokedex.Pokedex()
+    # One row per set that has been indexed into the database
+    mycursor.execute("CREATE TABLE IF NOT EXISTS Sets (setid TEXT PRIMARY KEY, name TEXT, numcards INTEGER)")
 
-    # Creates a CardSet object that has information on the cards in Evolutions
-    # Information includes card numbers, pokemon names, card names, card rarity, and card type
-    evoSet = cardSet.CardSet()
+    # The card list of every set, straight from each set's cards.csv
+    mycursor.execute("CREATE TABLE IF NOT EXISTS Cards (setid TEXT, cardnumber INTEGER, \
+            cardname TEXT, pokemon TEXT, rarity TEXT, cardtype TEXT, \
+            PRIMARY KEY (setid, cardnumber), FOREIGN KEY(setid) REFERENCES Sets(setid))")
 
-    # Creates a EvolutionsSet object that stores the hashes for the images of the Pokemon cards
-    # Has hashes for the following orientations of the card: normal, mirrored, upside-down, upside down mirrored
-    evoCards = evolutionsSet.EvolutionsSet()
-
-    # Creates a new table Pokemon that will hold the values in the poke Pokedex object
-    mycursor.execute("CREATE TABLE Pokemon (dexNumber INTEGER, pokemon TEXT PRIMARY KEY, \
-            poketype TEXT, height REAL, stage TEXT)")
-
-    # Populates the Pokemon table
-    for x in range(poke.numpoke):
-        mycursor.execute("INSERT INTO Pokemon (dexNumber, pokemon, poketype, stage, height) VALUES(?, ?, ?, ?, ?)",
-                         (poke.dexnumber[x], poke.pokemon[x], poke.type[x], poke.stage[x], poke.height[x]))
-
-    # Creates a new table EvolutionsSet that will hold the values in the evoSet CardSet object
-    mycursor.execute("CREATE TABLE EvolutionsSet (cardnumber INTEGER PRIMARY KEY AUTOINCREMENT, \
-            cardname TEXT, pokemon TEXT, rarity TEXT, cardtype TEXT)")
-
-    # Populates the EvolutionsSet table
-    for x in range(evoSet.numCards):
-        mycursor.execute("INSERT INTO EvolutionsSet (cardname, pokemon, rarity, cardtype) VALUES(?, ?, ?, ?)",
-                         (evoSet.cardnamelist[x], evoSet.pokemonlist[x], evoSet.rarity[x], evoSet.cardtype[x]))
-
-    # Creates a new table EvolutionsCards that will hold the values in the evoCards EvolutionsSet object
-    mycursor.execute("CREATE TABLE EvolutionsCards (cardnumber INTEGER PRIMARY KEY AUTOINCREMENT, \
+    # The 16 image hashes of every card: four hashing methods in four orientations
+    mycursor.execute("CREATE TABLE IF NOT EXISTS CardHashes (setid TEXT, cardnumber INTEGER, \
             avghashes TEXT, avghashesmir TEXT, avghashesud TEXT, avghashesudmir TEXT, \
             whashes TEXT, whashesmir TEXT, whashesud TEXT, whashesudmir TEXT, \
             phashes TEXT, phashesmir TEXT, phashesud TEXT, phashesudmir TEXT, \
             dhashes TEXT, dhashesmir TEXT, dhashesud TEXT, dhashesudmir TEXT, \
-            FOREIGN KEY(cardnumber) REFERENCES EvolutionsSet(cardnumber))")
+            PRIMARY KEY (setid, cardnumber), \
+            FOREIGN KEY(setid, cardnumber) REFERENCES Cards(setid, cardnumber))")
 
-    # Populates the EvolutionsCards table
-    for x in range(evoCards.setSize):
+    # Information on the first 151 (Kanto) Pokemon and some of their mega evolutions.
+    # Shared by every set: pokedex number, pokemon names, type, stage, and height
+    mycursor.execute("CREATE TABLE IF NOT EXISTS Pokemon (dexNumber INTEGER, pokemon TEXT PRIMARY KEY, \
+            poketype TEXT, height REAL, stage TEXT)")
+
+    db.commit()
+
+
+# Populates the Pokemon table if it is empty
+def initializePokedex(db):
+    mycursor = db.cursor()
+    if mycursor.execute("SELECT COUNT(*) FROM Pokemon").fetchone()[0] > 0:
+        return
+
+    poke = pokedex.Pokedex()
+    for x in range(poke.numpoke):
+        mycursor.execute("INSERT INTO Pokemon (dexNumber, pokemon, poketype, stage, height) VALUES(?, ?, ?, ?, ?)",
+                         (poke.dexnumber[x], poke.pokemon[x], poke.type[x], poke.stage[x], poke.height[x]))
+    db.commit()
+
+
+# Returns True if the set has already been hashed into the database
+def isSetIndexed(setid):
+    db = connect()
+    row = db.execute("SELECT numcards FROM Sets WHERE setid=?", (setid,)).fetchone()
+    db.close()
+    return row is not None
+
+
+# Makes sure a set is ready to scan against, hashing its card images into the database
+# the first time it is used. Later runs reuse the stored hashes, so only a newly added
+# set pays the hashing cost. Pass force=True to re-hash a set whose files have changed.
+def ensureSetIndexed(setid, force=False):
+    setdef = cardSets.loadSet(setid)
+
+    db = connect()
+    initializePokedex(db)
+
+    existing = db.execute("SELECT numcards FROM Sets WHERE setid=?", (setid,)).fetchone()
+    if existing is not None and not force:
+        db.close()
+        return setdef
+
+    print(f"Indexing set '{setdef.name}' ({setdef.numCards} cards). This runs once and may take a moment...")
+
+    def progress(done, total):
+        if done % 25 == 0 or done == total:
+            print(f'  hashed {done}/{total} cards')
+
+    # Hash first: if an image is missing this raises before anything is written,
+    # leaving the set unindexed rather than half-indexed
+    arrays = cardSets.hashSet(setdef, progress=progress)
+
+    mycursor = db.cursor()
+    # Clear any earlier rows so a forced re-index does not leave stale cards behind
+    mycursor.execute("DELETE FROM CardHashes WHERE setid=?", (setid,))
+    mycursor.execute("DELETE FROM Cards WHERE setid=?", (setid,))
+    mycursor.execute("DELETE FROM Sets WHERE setid=?", (setid,))
+
+    mycursor.execute("INSERT INTO Sets (setid, name, numcards) VALUES(?, ?, ?)",
+                     (setid, setdef.name, setdef.numCards))
+
+    for x, card in enumerate(setdef.cards):
+        mycursor.execute("INSERT INTO Cards (setid, cardnumber, cardname, pokemon, rarity, cardtype) \
+                VALUES(?, ?, ?, ?, ?, ?)",
+                         (setid, card['cardnumber'], card['cardname'],
+                          card['pokemon'], card['rarity'], card['cardtype']))
+
         mycursor.execute(
-            "INSERT INTO EvolutionsCards (avghashes, avghashesmir, avghashesud, avghashesudmir, \
+            "INSERT INTO CardHashes (setid, cardnumber, \
+            avghashes, avghashesmir, avghashesud, avghashesudmir, \
             whashes, whashesmir, whashesud, whashesudmir, \
             phashes, phashesmir, phashesud, phashesudmir, \
             dhashes, dhashesmir, dhashesud, dhashesudmir) \
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (evoCards.hashes[x][0], evoCards.hashesmir[x][0], evoCards.hashesud[x][0], evoCards.hashesudmir[x][0],
-             evoCards.hashes[x][1], evoCards.hashesmir[x][1], evoCards.hashesud[x][1], evoCards.hashesudmir[x][1],
-             evoCards.hashes[x][2], evoCards.hashesmir[x][2], evoCards.hashesud[x][2], evoCards.hashesudmir[x][2],
-             evoCards.hashes[x][3], evoCards.hashesmir[x][3], evoCards.hashesud[x][3], evoCards.hashesudmir[x][3]))
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (setid, card['cardnumber'],
+             arrays['hash'][x][0], arrays['hashmir'][x][0], arrays['hashud'][x][0], arrays['hashudmir'][x][0],
+             arrays['hash'][x][1], arrays['hashmir'][x][1], arrays['hashud'][x][1], arrays['hashudmir'][x][1],
+             arrays['hash'][x][2], arrays['hashmir'][x][2], arrays['hashud'][x][2], arrays['hashudmir'][x][2],
+             arrays['hash'][x][3], arrays['hashmir'][x][3], arrays['hashud'][x][3], arrays['hashudmir'][x][3]))
 
-    # Commits changes to the database
     db.commit()
     db.close()
 
+    _hashCache.pop(setid, None)  # Any cached hashes are now out of date
+    print(f"Set '{setdef.name}' is ready.")
+    return setdef
 
-# Returns a dictionary of values of the matching Pokemon card if the hash distance is within the cutoff range
-# If no matching card is found, it returns None
-def compareCards(hashes):
-    cutoff = 18  # Arbitrarily set cutoff value; was found through testing
-    # Connects to the pokemon card database
-    db = sqlite3.connect(databasename)
 
-    mycursor = db.cursor()
+# Deletes the database file so the next run rebuilds it from scratch
+def createDatabase():
+    if os.path.exists(databasename):
+        os.remove(databasename)
+    _hashCache.clear()
+    db = connect()
+    initializePokedex(db)
+    db.close()
 
-    mycursor.execute("SELECT * FROM EvolutionsCards")  # Gets values from EvolutionsCards (hashes)
-    rows = mycursor.fetchall()  # SQLite does not populate rowcount, so fetch every row up front
 
-    # Create arrays of size=4 that store hash differences for each orientation; every hashing method gets its own array
-    avghashesDists = np.zeros(4)
-    whashesDists = np.zeros(4)
-    phashesDists = np.zeros(4)
-    dhashesDists = np.zeros(4)
+# Reads a set's hashes out of the database and converts them from strings back into hashes
+# Note: the hashes are stored as Strings in the database because SQL doesn't support storing hashes
+# Returns a list of (cardnumber, 4 methods x 4 orientations array of hashes)
+def getSetHashes(setid):
+    if setid in _hashCache:
+        return _hashCache[setid]
 
-    maxHashDists = []  # An array that will store the maximum of the minimum hash difference for each card
+    db = connect()
+    rows = db.execute("SELECT * FROM CardHashes WHERE setid=? ORDER BY cardnumber", (setid,)).fetchall()
+    db.close()
 
-    for row in rows:  # Loop through each row in EvolutionsCards table
+    parsed = []
+    for row in rows:
         # Get the values stored in each row
-        # Note: the hashes are stored as Strings in the database because SQL doesn't support storing hashes
-        cardnum, \
+        _, cardnum, \
             avghash1, avghash2, avghash3, avghash4, \
-            whash1, whash2, whash3, whash4,\
+            whash1, whash2, whash3, whash4, \
             phash1, phash2, phash3, phash4, \
             dhash1, dhash2, dhash3, dhash4 = row
 
-        # Convert each hash from a String to a hash and find the distance from the scanned image
-        avghashesDists[0] = hashes[0] - imagehash.hex_to_hash(avghash1)
-        avghashesDists[1] = hashes[0] - imagehash.hex_to_hash(avghash2)
-        avghashesDists[2] = hashes[0] - imagehash.hex_to_hash(avghash3)
-        avghashesDists[3] = hashes[0] - imagehash.hex_to_hash(avghash4)
+        # Row per hashing method, column per card orientation
+        parsed.append((cardnum, [
+            [imagehash.hex_to_hash(h) for h in (avghash1, avghash2, avghash3, avghash4)],
+            [imagehash.hex_to_hash(h) for h in (whash1, whash2, whash3, whash4)],
+            [imagehash.hex_to_hash(h) for h in (phash1, phash2, phash3, phash4)],
+            [imagehash.hex_to_hash(h) for h in (dhash1, dhash2, dhash3, dhash4)],
+        ]))
 
-        whashesDists[0] = hashes[1] - imagehash.hex_to_hash(whash1)
-        whashesDists[1] = hashes[1] - imagehash.hex_to_hash(whash2)
-        whashesDists[2] = hashes[1] - imagehash.hex_to_hash(whash3)
-        whashesDists[3] = hashes[1] - imagehash.hex_to_hash(whash4)
+    _hashCache[setid] = parsed
+    return parsed
 
-        phashesDists[0] = hashes[2] - imagehash.hex_to_hash(phash1)
-        phashesDists[1] = hashes[2] - imagehash.hex_to_hash(phash2)
-        phashesDists[2] = hashes[2] - imagehash.hex_to_hash(phash3)
-        phashesDists[3] = hashes[2] - imagehash.hex_to_hash(phash4)
 
-        dhashesDists[0] = hashes[3] - imagehash.hex_to_hash(dhash1)
-        dhashesDists[1] = hashes[3] - imagehash.hex_to_hash(dhash2)
-        dhashesDists[2] = hashes[3] - imagehash.hex_to_hash(dhash3)
-        dhashesDists[3] = hashes[3] - imagehash.hex_to_hash(dhash4)
+# Returns a dictionary of values of the matching Pokemon card in the given set if the hash
+# distance is within that set's cutoff range. If no matching card is found, it returns None.
+def compareCards(hashes, setid):
+    setdef = cardSets.loadSet(setid)
+    cutoff = setdef.cutoff  # Set in the set's set.json; found through testing
 
-        # Find the minimum of each hashing method
-        # This should make us look at the correct card orientation
-        hashDistances = [min(avghashesDists), min(whashesDists), min(phashesDists), min(dhashesDists)]
+    cards = getSetHashes(setid)
+    if not cards:
+        raise LookupError(f"Set '{setid}' has not been indexed yet; call cardData.ensureSetIndexed('{setid}') first")
+
+    maxHashDists = []  # An array that will store the maximum of the minimum hash difference for each card
+    cardNumbers = []  # The card number each entry of maxHashDists belongs to
+
+    for cardnum, cardHashes in cards:  # Loop through each card of the set
+        # For each hashing method, find the distance from the scanned image in all four orientations
+        # and keep the smallest. This should make us look at the correct card orientation.
+        hashDistances = [min(hashes[method] - stored for stored in cardHashes[method])
+                         for method in range(4)]
         maxHashDists.append(max(hashDistances))  # Find the max of the mins of each hashing method to reduce error
+        cardNumbers.append(cardnum)
 
-    print(min(maxHashDists))
-    if min(maxHashDists) < cutoff:  # If the smallest hash distance is less than the cutoff, we have found our card
-        minCardNum = maxHashDists.index(min(maxHashDists)) + 1  # Find the card number of the card
+    bestDist = min(maxHashDists)
+    print(bestDist)
+    if bestDist >= cutoff:  # Nothing was close enough to call a match
+        return None
 
-        # Get values from minCardNum row of EvolutionsSet table
-        mycursor.execute("SELECT * FROM EvolutionsSet WHERE cardnumber=?", (minCardNum,))
-        vals = mycursor.fetchone()
-        _, cardname, poke, rarity, cardtype = vals
+    minCardNum = cardNumbers[maxHashDists.index(bestDist)]  # Find the card number of the card
 
-        # Get values from poke row of Pokemon table
-        mycursor.execute("SELECT * FROM Pokemon WHERE pokemon=?", (poke,))
-        vals2 = mycursor.fetchone()
-        db.close()
+    db = connect()
+    mycursor = db.cursor()
 
-        # Trainer cards and Pokemon outside the Kanto pokedex have no matching Pokemon row
-        if vals2 is None:
-            dexnumber = poketype = height = stage = 'N/A'
-        else:
-            dexnumber, _, poketype, height, stage = vals2
+    # Get the matching card's row from the Cards table
+    mycursor.execute("SELECT cardname, pokemon, rarity, cardtype FROM Cards WHERE setid=? AND cardnumber=?",
+                     (setid, minCardNum))
+    cardname, poke, rarity, cardtype = mycursor.fetchone()
 
-        # Return dictionary with traits about cards
-        return {'Card Number': minCardNum,
-                'Pokemon': poke,
-                'Card Name': cardname,
-                'Rarity': rarity,
-                'Card Type': cardtype,
-                'Pokedex Number': dexnumber,
-                'Pokemon Type': poketype,
-                'Pokemon Stage': stage,
-                'Pokemon Height': height}
+    # Get values from poke row of Pokemon table
+    mycursor.execute("SELECT * FROM Pokemon WHERE pokemon=?", (poke,))
+    vals2 = mycursor.fetchone()
     db.close()
-    return None
+
+    # Trainer cards and Pokemon outside the Kanto pokedex have no matching Pokemon row
+    if vals2 is None:
+        dexnumber = poketype = height = stage = 'N/A'
+    else:
+        dexnumber, _, poketype, height, stage = vals2
+
+    # Return dictionary with traits about cards
+    return {'Set': setdef.name,
+            'Set Id': setid,
+            'Card Number': minCardNum,
+            'Pokemon': poke,
+            'Card Name': cardname,
+            'Rarity': rarity,
+            'Card Type': cardtype,
+            'Pokedex Number': dexnumber,
+            'Pokemon Type': poketype,
+            'Pokemon Stage': stage,
+            'Pokemon Height': height}
