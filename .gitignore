@@ -9,3 +9,6 @@ venv/
 
 # Scratch / debug output
 debugOutput/
+
+# Saved chat transcripts
+conversation-*.md
