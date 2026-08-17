@@ -1,5 +1,7 @@
 # A Pokedex object contains information about every Pokemon in Kanto (the first 151 Pokemon)
 # The mega evolutions of the Pokemon in the Evoltuions Set are also included
+# Pokemon from later regions are added as sets need them, after the megas and before the NA slot:
+# the lookup in cardData.compareCards() is by name, so position does not matter
 class Pokedex:
     def __init__(self):
         # List of all 151 Pokemon + NA slot
@@ -159,6 +161,12 @@ class Pokedex:
                         "Mega Blastoise",  # -009 Mega Blastoise
                         "Mega Pidgeot",  # -018 Mega Pidgeot
                         "Mega Slowbro",  # -080 Mega Slowbro
+                        "Turtwig",  # 387 Turtwig
+                        "Chimchar",  # 390 Chimchar
+                        "Piplup",  # 393 Piplup
+                        "Rowlet",  # 722 Rowlet
+                        "Litten",  # 725 Litten
+                        "Popplio",  # 728 Popplio
                         "NA")  # 000 Represents NA
 
         # Stores the Pokedex number of all Kanto Pokemon
@@ -320,6 +328,12 @@ class Pokedex:
                           -9,  # -009 Mega Blastoise
                           -18,  # -018 Mega Pidgeot
                           -80,  # -080 Mega Slowbro
+                          387,  # 387 Turtwig
+                          390,  # 390 Chimchar
+                          393,  # 393 Piplup
+                          722,  # 722 Rowlet
+                          725,  # 725 Litten
+                          728,  # 728 Popplio
                           0)  # 000 Represents NA
 
         # Stage of Pokemon: Unevolved = basic; stage 1 = evolved once, stage 2 = evolved twice, Mega = mega evolution
@@ -480,6 +494,12 @@ class Pokedex:
                         "Mega",  # -009 Mega Blastoise
                         "Mega",  # -018 Mega Pidgeot
                         "Mega",  # -080 Mega Slowbro
+                        "basic",  # 387 Turtwig
+                        "basic",  # 390 Chimchar
+                        "basic",  # 393 Piplup
+                        "basic",  # 722 Rowlet
+                        "basic",  # 725 Litten
+                        "basic",  # 728 Popplio
                         "NA")  # 000 Represents NA
 
         # Type of first 151 Pokemon according to the card game
@@ -639,6 +659,12 @@ class Pokedex:
                      "Water",  # -009 Mega Blastoise
                      "Colorless",  # -018 Mega Pidgeot
                      "Water",  # -080 Mega Slowpoke
+                     "Grass",  # 387 Turtwig
+                     "Fire",  # 390 Chimchar
+                     "Water",  # 393 Piplup
+                     "Grass",  # 722 Rowlet - Grass/Flying in the games, Grass on the card
+                     "Fire",  # 725 Litten
+                     "Water",  # 728 Popplio
                      "NA")  # 000 Represents NA
 
         # Height of Pokemon in meters + 0 for NA
@@ -798,6 +824,12 @@ class Pokedex:
                        1.6,  #-009 Mega Blastoise
                        2.2,  #-018 Mega Pidgeot
                        2.0,  #-080 Mega Slowbro
+                       0.4,  # 387 Turtwig
+                       0.5,  # 390 Chimchar
+                       0.4,  # 393 Piplup
+                       0.3,  # 722 Rowlet
+                       0.4,  # 725 Litten
+                       0.4,  # 728 Popplio
                        0.0)  # 000 Represents NA
 
         self.numpoke = len(self.pokemon)  # Number of Pokemon
