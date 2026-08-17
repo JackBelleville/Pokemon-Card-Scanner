@@ -1,0 +1,15 @@
+image,setid,kind,expect,note
+tiltleft.jpg,evolutions,raw,20,Magmar photographed tilted left
+tiltright.jpg,evolutions,raw,20,Magmar photographed tilted right
+horizontal.jpg,evolutions,raw,nomatch,Blank grey rectangle - geometry fixture for the contour and warp code
+vertical.jpg,evolutions,raw,nomatch,Blank grey rectangle - geometry fixture for the contour and warp code
+firetiltleft.jpg,evolutions,raw,nomatch,SVE 002 Fire Energy - not in Evolutions; must not match its 2016 Fire Energy #92
+firetiltright.jpg,evolutions,raw,nomatch,SVE 002 Fire Energy - second angle
+psychictiltleft.jpg,evolutions,raw,nomatch,MEE 005 Psychic Energy - not in Evolutions; must not match its 2016 Psychic Energy #95
+psychictiltright.jpg,evolutions,raw,nomatch,MEE 005 Psychic Energy - second angle
+firstpartner1-squirtle-bare-1.png,firstpartner1,warped,39,Bare card - the supported case
+firstpartner1-squirtle-bare-2.png,firstpartner1,warped,39,Bare card - the supported case
+firstpartner1-squirtle-bare-3.png,firstpartner1,warped,39,Bare card - the supported case
+firstpartner1-squirtle-sleeved-1.png,firstpartner1,warped,nomatch,Sleeved - contour grabs the sleeve edge so the card sits inset; documented limitation
+firstpartner1-squirtle-sleeved-2.png,firstpartner1,warped,nomatch,Sleeved - contour grabs the sleeve edge so the card sits inset; documented limitation
+firstpartner1-squirtle-sleeved-3.png,firstpartner1,warped,nomatch,Sleeved - contour grabs the sleeve edge so the card sits inset; documented limitation
